@@ -23,15 +23,17 @@ module RemoteSyslogLogger
     
     def transmit(message)
       message.split(/\r?\n/).each do |line|
-        begin
-          next if line =~ /^\s*$/
-          packet = @packet.dup
-          packet.content = line
-          payload = @max_size ? packet.assemble(@max_size) : packet.assemble
-          @socket.send(payload, 0, @remote_hostname, @remote_port)
-        rescue
-          $stderr.puts "#{self.class} error: #{$!.class}: #{$!}\nOriginal message: #{line}"
-          raise if @whinyerrors
+        Thread.new do
+          begin
+            next if line =~ /^\s*$/
+            packet = @packet.dup
+            packet.content = line
+            payload = @max_size ? packet.assemble(@max_size) : packet.assemble
+            @socket.send(payload, 0, @remote_hostname, @remote_port)
+          rescue
+            $stderr.puts "#{self.class} error: #{$!.class}: #{$!}\nOriginal message: #{line}"
+            raise if @whinyerrors
+          end
         end
       end
     end
